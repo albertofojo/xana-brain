@@ -1,0 +1,39 @@
+services:
+  # Database Service (PostgreSQL 16)
+  xana-db:
+    image: postgres:16-alpine
+    container_name: xana-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespw
+      POSTGRES_DB: xana_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - xana-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Service (Xana.API)
+  xana-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: xana-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=xana-db;Database=xana_db;Username=postgres;Password=postgrespw
+      # If you have a local firebase json, map it. Otherwise it will try ADC (which might fail locally without setup).
+      # - Firebase__CredentialPath=/app/firebase-credentials.json 
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      xana-db:
+        condition: service_healthy
+
+volumes:
+  xana-db-data:
